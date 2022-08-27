@@ -1,4 +1,5 @@
 import sqlite3
+import csv
 
 class Database:
   def __init__(self, filename):
@@ -48,53 +49,117 @@ class Database:
     """
     conn = self._connect()
     cursor = conn.cursor()
-    query = """CREATE TABLE IF NOT EXISTS leituras (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      data_acesso TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
-      data_previsao TEXT NOT NULL,
-      local VARCHAR(155) NOT NULL,
-      temperatura INTEGER NOT NULL
-    )"""
-    cursor.execute(query)
+
+    # Cria tabelas
+    query = """
+        CREATE TABLE IF NOT EXISTS local (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            nome VARCHAR(32) NOT NULL UNIQUE,
+            url VARCHAR(128) NOT NULL UNIQUE
+        );
+
+        CREATE TABLE IF NOT EXISTS acesso (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            dt_acesso TEXT NOT NULL DEFAULT (datetime('now', 'localtime')),
+            dt_previsao TEXT NOT NULL,
+            id_local INTEGER,
+            FOREIGN KEY (id_local) REFERENCES local(id),
+            UNIQUE (dt_acesso, dt_previsao, id_local)
+        );
+
+        CREATE TABLE IF NOT EXISTS previsao (
+            id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+            id_acesso INTEGER NOT NULL,
+            horario VARCHAR(32),
+            temperatura INTEGER,
+            FOREIGN KEY (id_acesso) REFERENCES acesso(id)
+        );
+      """
+    
+    cursor.executescript(query)
     conn.commit()
     conn.close()
 
-  def add_leitura(self, data, temperatura, local):
+  def load_locais(self, file):
     """
-      Adiciona uma leitura de previsão (com data, temperatura e local) 
-    ao banco de dados.
-      data: timestamp (YYYY-MM-DD HH:MM:SS) de quando para quando foi feita a previsão
-      temperatura: temperatura prevista
-      local: local/cidade para qual a previsão foi feita
+      Lê o CSV que relaciona o nome do local à sua URL no site climatempo
+      e insere essas informações na tabela "local"
     """
-    self._check_coonection()      
-    
+    reader = csv.reader(file)
+    next(reader)
     cursor = self.con.cursor()
-    query = "INSERT INTO leituras (data_previsao, temperatura, local) VALUES (?, ?, ?)"
-    parameters = (data, temperatura, local)
+    for line in reader:
+        query = "INSERT OR IGNORE INTO local (nome, url) VALUES (?, ?)"
+        parameters = (line[0], line[1])
+        cursor.execute(query, parameters)
 
-    cursor.execute(query, parameters)
     self.con.commit()
 
-  def get_leituras(self, data, hora, local):
+  def get_locais(self):
     """
-      Retorna as leituras feitas em um local para uma determinada data
-    e hora.
-      data: data da previsão a ser selecionada
-      hora: horário (HH) da previsão a ser selecionada
-      local: local da previsão a ser selecionada
+      Retorna lista de dicionários com todos os locais na tabela "local"
+      id - primary key do objeto
+      nome - nome do local
+      url - url do local no site climatempo
     """
-    self._check_coonection()    
 
-    cursor = self.con.cursor()
-    query = """SELECT data_previsao, data_acesso, temperatura FROM leituras WHERE 
-      date(data_previsao) = date(?)
-      AND CAST(strftime('%H', data_previsao) AS INT) = ? 
-      AND local = ?"""
-    params = (data, hora, local)
+    cur = self.con.cursor()
+    result = cur.execute("SELECT * FROM local").fetchall()
+    self.con.commit()
+    return [{"id":x[0], "nome":x[1], "url":x[2]} for x in result]
 
-    cursor.execute(query, params)
-    res = cursor.fetchall()
-    labels = ('Data da previsão', 'Acesso em', 'Temperatura (°C)')
+  def registra_acesso(self, id_local, dt_acesso, dt_previsao):
+    """
+      Registra o acesso na tabel "acesso" do banco de dados
+      e retorna o ID da linha inserida
+    """
 
-    return [dict(zip(labels, prev)) for prev in res] 
+    cur = self.con.cursor()
+    query = "INSERT INTO acesso (id_local, dt_acesso, dt_previsao) VALUES (?, ?, ?)"
+    parameters = (id_local, dt_acesso, dt_previsao)
+    cur.execute(query, parameters)
+    
+    self.con.commit()
+
+    return cur.lastrowid
+
+  def get_acessos(self, id=None):
+    cur = self.con.cursor()
+    if id:
+        query = "SELECT * FROM acesso WHERE id=?"
+        parameters = (id,)
+        result = cur.execute(query, parameters).fetchall()
+    else:
+        query = "SELECT * FROM acesso"
+        result = cur.execute(query).fetchall()
+    
+    return [{"id":x[0], "dt_acesso":x[1], "dt_previsao":x[2], "id_local":x[3]} for x in result]
+  
+  def registra_previsao(self, id_acesso, horario, temperatura):
+    """
+      Registra a previsao na tabela "previsao" do banco de dados
+      e retorna o ID da linha inserida
+    """
+
+    cur = self.con.cursor()
+    query = "INSERT INTO previsao (id_acesso, horario, temperatura) VALUES (?, ?, ?)"
+    parameters = (id_acesso, horario, temperatura)
+    cur.execute(query, parameters)
+    
+    self.con.commit()
+
+    return cur.lastrowid
+
+  def get_previsoes(self, id=None):
+    cur = self.con.cursor()
+    if id:
+        query = "SELECT * FROM previsao WHERE id=?"
+        parameters = (id,)
+        result = cur.execute(query, parameters).fetchall()
+    else:
+        query = "SELECT * FROM previsao"
+        result = cur.execute(query).fetchone()
+    
+    return [{"id":x[0], "id_acesso":x[1], "horario":x[2], "temperatura":x[3]} for x in result]
+  
+  
