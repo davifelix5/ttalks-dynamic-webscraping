@@ -63,6 +63,9 @@ class Database:
     """
       Adiciona uma leitura de previsão (com data, temperatura e local) 
     ao banco de dados.
+      data: timestamp (YYYY-MM-DD HH:MM:SS) de quando para quando foi feita a previsão
+      temperatura: temperatura prevista
+      local: local/cidade para qual a previsão foi feita
     """
     self._check_coonection()      
     
@@ -77,6 +80,9 @@ class Database:
     """
       Retorna as leituras feitas em um local para uma determinada data
     e hora.
+      data: data da previsão a ser selecionada
+      hora: horário (HH) da previsão a ser selecionada
+      local: local da previsão a ser selecionada
     """
     self._check_coonection()    
 
