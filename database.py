@@ -165,8 +165,8 @@ class Database:
   
   def get_previsoes_filtradas(self, data_acesso, data_previsao, cidade, time=None):
     cursor = self.con.cursor()
-    query = """SELECT p.temperatura, p.horario, a.dt_previsao, a.dt_acesso, l.nome 
-			FROM previsao p 
+    query = """SELECT p.temperatura, p.horario, a.dt_previsao, a.dt_acesso, l.nome
+			FROM previsao p
       INNER JOIN acesso a
       ON p.id_acesso = a.id
 			INNER JOIN local l

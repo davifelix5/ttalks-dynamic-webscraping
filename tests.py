@@ -27,6 +27,6 @@ with db as connection:
         #print("Inserindo previsão {} {} {}".format(id_acesso, obj['date'].split()[1], obj['temperature']['temperature']))
         #db.registra_previsao(id_acesso, obj['date'].split()[1], obj['temperature']['temperature'])
 
-    print(db.get_previsoes_filtradas(data_acesso='2022-08-28', data_previsao='2022-08-28', cidade="São Paulo"))
+    print(db.get_previsoes_filtradas(data_acesso='2022-08-28', data_previsao='2022-08-28', cidade="São Paulo", time="15:00:00"))
 
     
