@@ -152,14 +152,38 @@ class Database:
 
   def get_previsoes(self, id=None):
     cur = self.con.cursor()
+    query = "SELECT * FROM previsao"
+    parameters = []
+
     if id:
-        query = "SELECT * FROM previsao WHERE id=?"
-        parameters = (id,)
-        result = cur.execute(query, parameters).fetchall()
-    else:
-        query = "SELECT * FROM previsao"
-        result = cur.execute(query).fetchone()
+        query += " WHERE id=?"
+        parameters.append(id)
+
+    result = cur.execute(query, parameters).fetchall()
     
     return [{"id":x[0], "id_acesso":x[1], "horario":x[2], "temperatura":x[3]} for x in result]
   
-  
+  def get_previsoes_filtradas(self, data_acesso, data_previsao, cidade, time=None):
+    cursor = self.con.cursor()
+    query = """SELECT p.temperatura, p.horario, a.dt_previsao, a.dt_acesso, l.nome 
+			FROM previsao p 
+      INNER JOIN acesso a
+      ON p.id_acesso = a.id
+			INNER JOIN local l
+			ON a.id_local = l.id
+      WHERE
+			l.nome = ? AND
+      a.dt_acesso = ? AND
+      a.dt_previsao = ?
+    """
+    parameters = [cidade, data_acesso, data_previsao]
+
+    if time:
+      query += " AND horario = ?"
+      parameters.append(time)
+
+    response = cursor.execute(query, parameters).fetchall()
+    self.con.commit()
+    
+    labels = ('temperatura_prevista', 'horario_previsao', 'dt_previsao', 'dt_acesso', 'cidade')
+    return [dict(zip(labels, prev)) for prev in response]
