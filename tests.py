@@ -1,4 +1,3 @@
-import csv
 import database
 import json
 from datetime import datetime
@@ -21,9 +20,13 @@ with db as connection:
         infos = json.loads(file.read())
 
     # Registra o acesso
-    id_acesso = db.registra_acesso(1, today(), today())
+    #id_acesso = db.registra_acesso(1, today(), today())
 
-    for obj in infos:
+    #for obj in infos:
     
-        print("Inserindo previsão {} {} {}".format(id_acesso, obj['date'].split()[1], obj['temperature']['temperature']))
-        db.registra_previsao(id_acesso, obj['date'].split()[1], obj['temperature']['temperature'])
+        #print("Inserindo previsão {} {} {}".format(id_acesso, obj['date'].split()[1], obj['temperature']['temperature']))
+        #db.registra_previsao(id_acesso, obj['date'].split()[1], obj['temperature']['temperature'])
+
+    print(db.get_previsoes_filtradas(data_acesso='2022-08-28', data_previsao='2022-08-28', cidade="São Paulo", time="15:00:00"))
+
+    
